@@ -111,6 +111,10 @@ test("reacquires the Gemini composer after reference upload and guards empty inj
 test("enables image mode before upload and refuses a reference count mismatch", () => {
   assert.match(executor, /Enable image generation before uploading references/);
   assert.match(executor, /selectors\.imageModeEnabled/);
+  assert.match(executor, /findComposerToolsButton/);
+  assert.match(executor, /imageModeIsEnabled/);
+  assert.match(executor, /findComposerSendButton/);
+  assert.match(executor, /composerRect\.left \+ 24/);
   assert.match(executor, /REFERENCE_COUNT_MISMATCH/);
   assert.match(executor, /STALE_ATTACHMENT_CLEAR_FAILED/);
   assert.match(executor, /REFERENCE_NOT_SUBMITTED/);
@@ -118,6 +122,14 @@ test("enables image mode before upload and refuses a reference count mismatch", 
   assert.match(executor, /baselineUserMessages/);
   assert.match(executor, /userMessageText/);
   assert.match(executor, /submit-retry/);
+  assert.ok(selectors.labels.createImage.includes("Tạo hình ảnh"));
+  assert.ok(selectors.labels.createImage.includes("Tạo ảnh"));
+  assert.ok(selectors.labels.imageModeEnabled.includes("Hình ảnh"));
+  assert.match(selectors.selectors.attachmentButton, /Tải lên/);
+  assert.match(selectors.selectors.attachmentButton, /Công cụ/);
+  assert.match(selectors.selectors.createImageMenuItem, /menuitemradio/);
+  assert.match(selectors.selectors.imageModeEnabled, /Bỏ chọn/);
+  assert.match(selectors.selectors.sendButton, /Gửi/);
   assert.equal(selectors.selectors.attachment, "img.gem-attachment-style-img[alt='attachment'], img[alt='attachment']");
   assert.match(selectors.selectors.attachmentClose, /close attachment/);
 });

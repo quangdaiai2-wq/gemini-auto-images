@@ -1,6 +1,6 @@
 # Auto Gemini Images
 
-> Phiên bản hiện tại: **0.8.8** · Hoạt động trên `https://gemini.google.com/app` · Yêu cầu Chrome 116 trở lên.
+> Phiên bản hiện tại: **0.8.12** · Hoạt động trên `https://gemini.google.com/app` · Yêu cầu Chrome 116 trở lên.
 
 Auto Gemini Images là extension Chrome Manifest V3 giúp chạy tuần tự nhiều yêu cầu tạo ảnh bằng tài khoản Gemini đang đăng nhập trên trình duyệt. Extension hỗ trợ prompt độc lập, ảnh tham chiếu, hàng chờ bền vững, tải kết quả và nhật ký chẩn đoán theo từng phiên.
 

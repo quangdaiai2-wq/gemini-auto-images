@@ -90,6 +90,49 @@ async function prepareAndSubmitOnPage(task, config) {
       ).toLowerCase();
       return labels.some((expected) => label.includes(expected.toLowerCase()));
     });
+  const findComposerToolsButton = () => {
+    const namedButton = document.querySelector(selectors.attachmentButton);
+    if (namedButton) return namedButton;
+    const composer = document.querySelector(selectors.composer);
+    if (!composer) return null;
+    const composerRect = composer.getBoundingClientRect();
+    return [...document.querySelectorAll("button")].find((button) => {
+      const rect = button.getBoundingClientRect();
+      const verticallyAligned =
+        rect.top < composerRect.bottom && rect.bottom > composerRect.top;
+      return (
+        verticallyAligned &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.right <= composerRect.left + 24
+      );
+    }) || null;
+  };
+  const imageModeIsEnabled = () =>
+    Boolean(document.querySelector(selectors.imageModeEnabled)) ||
+    Boolean(findByLabels("button", config.labels.imageModeEnabled || []));
+  const isEnabled = (button) =>
+    Boolean(button) && !button.disabled && button.getAttribute("aria-disabled") !== "true";
+  const findComposerSendButton = () => {
+    const namedButton = document.querySelector(selectors.sendButton);
+    if (isEnabled(namedButton)) return namedButton;
+    const composer = document.querySelector(selectors.composer);
+    if (!composer) return null;
+    const composerRect = composer.getBoundingClientRect();
+    return [...document.querySelectorAll("button")]
+      .filter((button) => {
+        if (!isEnabled(button)) return false;
+        const rect = button.getBoundingClientRect();
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.left >= composerRect.left &&
+          rect.top >= composerRect.top - 32 &&
+          rect.top <= composerRect.bottom + 160
+        );
+      })
+      .sort((left, right) => right.getBoundingClientRect().right - left.getBoundingClientRect().right)[0] || null;
+  };
   const stableImageKey = (source) => {
     const value = String(source || "").trim();
     if (!value) return "";
@@ -193,9 +236,12 @@ async function prepareAndSubmitOnPage(task, config) {
   // Enable image generation before uploading references. Gemini replaces its
   // composer when this mode changes; doing it after upload can leave the
   // reference in the next draft while the text prompt is submitted alone.
-  let imageModeEnabled = Boolean(document.querySelector(selectors.imageModeEnabled));
+  let imageModeEnabled = imageModeIsEnabled();
   if (!imageModeEnabled) {
-    const toolsButton = document.querySelector(selectors.attachmentButton);
+    const toolsButton = findComposerToolsButton();
+    record("image-mode-menu", "Opened the Gemini tools menu.", {
+      foundToolsButton: Boolean(toolsButton),
+    });
     toolsButton?.click();
     const createImage = await waitFor(
       () => findByLabels(selectors.createImageMenuItem, config.labels.createImage),
@@ -211,7 +257,7 @@ async function prepareAndSubmitOnPage(task, config) {
     imageModeEnabled = Boolean(
       await waitFor(
         () =>
-          document.querySelector(selectors.imageModeEnabled) ||
+          imageModeIsEnabled() ||
           createImage.getAttribute("aria-checked") === "true" ||
           createImage.getAttribute("data-state") === "checked",
         5000,
@@ -223,7 +269,7 @@ async function prepareAndSubmitOnPage(task, config) {
     return fail("IMAGE_MODE_NOT_READY", "mode", "Gemini Create image mode did not become ready.");
   }
   record("image-mode", "Gemini Create image mode is enabled.", {
-    alreadyEnabled: Boolean(document.querySelector(selectors.imageModeEnabled)),
+    alreadyEnabled: imageModeIsEnabled(),
   });
 
   if (task.references.length) {
@@ -440,10 +486,7 @@ async function prepareAndSubmitOnPage(task, config) {
   record("prompt-ready", "Exact prompt is present in the composer.");
 
   const send = await waitFor(() => {
-    const button = document.querySelector(selectors.sendButton);
-    return button && !button.disabled && button.getAttribute("aria-disabled") !== "true"
-      ? button
-      : null;
+    return findComposerSendButton();
   }, 10000);
   if (!send) return fail("SEND_BUTTON_MISSING", "submit", "Enabled send button was not found.");
 
@@ -500,14 +543,12 @@ async function prepareAndSubmitOnPage(task, config) {
     const noSubmissionEvidence =
       newUserMessages().length === 0 &&
       !document.querySelector(selectors.stopButton);
-    const retrySend = document.querySelector(selectors.sendButton);
+    const retrySend = findComposerSendButton();
     if (
       stillDrafted &&
       noSubmissionEvidence &&
       draftReferenceCount === task.references.length &&
-      retrySend &&
-      !retrySend.disabled &&
-      retrySend.getAttribute("aria-disabled") !== "true"
+      isEnabled(retrySend)
     ) {
       retrySend.click();
       record(
